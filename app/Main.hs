@@ -17,8 +17,14 @@ playGame board@(Board turn cells) = do
              putStrLn $ "== Player has no moves! =="
              playGame (Board (invertTurn turn) cells)
            else do
-             move <- getLine
-             let moveLocation = parseCellLocation move
+             moveLocation <- if turn == WhiteTurn
+                               then do
+                                 let computerMove = chooseMove cells turn
+                                 putStrLn $ show computerMove
+                                 return $ Just computerMove
+                               else do
+                                 input <- getLine
+                                 return $ parseCellLocation input
              case moveLocation of
                Nothing -> do
                  putStrLn $ "== Invalid move location =="

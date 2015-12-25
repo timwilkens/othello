@@ -33,6 +33,7 @@ invertCell Black = White
 invertCell Empty = Empty
 
 data Turn = WhiteTurn | BlackTurn
+  deriving (Eq)
 
 instance Show Turn where
   show WhiteTurn = "[" ++ (show White) ++ "]"
@@ -151,6 +152,28 @@ hasMove :: Turn -> Cells -> Bool
 hasMove t cells = or $ map (\x -> length (cellsToFlip cells color x) > 0) empties
   where empties = emptyCells cells
         color = turnToCell t
+
+availableMoves :: Turn -> Cells -> [([CellLocation],CellLocation)]
+availableMoves t cells = filter (\x -> (length $ fst x) > 0) $ map (\x -> ((cellsToFlip cells color x), x)) empties
+  where empties = emptyCells cells
+        color = turnToCell t
+
+sortPossible :: ([CellLocation], CellLocation) -> ([CellLocation], CellLocation) -> Ordering
+sortPossible (x, _) (y, _)
+  | xLen > yLen = GT
+  | xLen < yLen = LT
+  | otherwise = EQ
+    where xLen = length x
+          yLen = length y
+
+chooseMove :: Cells -> Turn -> CellLocation
+-- For now return the move that would flip the most enemy cells
+chooseMove cells turn = case length sortedMoves of
+                          -- This case should never happen
+                          0 -> (CellLocation 1 1)
+                          _ -> head $ sortedMoves
+  where moves = availableMoves turn cells
+        sortedMoves = map snd $ sortBy (flip sortPossible) moves
 
 setCells :: Cells -> Cell -> [CellLocation] -> Cells
 setCells cells _ [] = cells
