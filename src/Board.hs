@@ -82,16 +82,6 @@ indexToLocation :: Int -> CellLocation
 indexToLocation n = (CellLocation col row)
   where col = (n `mod` 8) + 1
         row = (n `div` 8) + 1
-{-
-  | n <= 8 = (CellLocation n 1)
-  | n <= 16 = (CellLocation (n-8) 2)
-  | n <= 24 = (CellLocation (n-16) 3)
-  | n <= 32 = (CellLocation (n-24) 4)
-  | n <= 40 = (CellLocation (n-32) 5)
-  | n <= 48 = (CellLocation (n-40) 6)
-  | n <= 56 = (CellLocation (n-48) 7)
-  | n <= 64 = (CellLocation (n-56) 8)
-  -}
 
 data Direction = U | D | L | R | UL | UR | DL | DR
 
@@ -168,9 +158,6 @@ setCells cells color (x:xs) = setCells newCells color xs
   where index = locationToIndex x
         newCells = (take (index-1) cells) ++ (color:(drop index cells))
 
--- Check if move is valid based on neighboring cells
--- This function should manipulate the cells but *not*
--- the turn
 doMove :: Board -> Cell -> CellLocation -> Maybe Board
 doMove (Board t cells) play loc = if cellAvailable
                                      then if (length toFlip) == 0
