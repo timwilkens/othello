@@ -7,7 +7,7 @@ import Board
 
 playGame :: Board -> IO Board
 playGame board@(Board turn cells) = do
-    putStrLn $ show board
+    putStr $ show board
     case length $ filter isEmpty cells of
       0 -> do
         return board
@@ -20,7 +20,7 @@ playGame board@(Board turn cells) = do
              moveLocation <- if turn == WhiteTurn
                                then do
                                  let computerMove = chooseMove cells turn
-                                 putStrLn $ show computerMove
+                                 putStrLn $ "Computer plays: [" ++ show computerMove ++ "]"
                                  return $ Just computerMove
                                else do
                                  input <- getLine

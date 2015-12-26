@@ -51,12 +51,19 @@ type Cells = [Cell]
 data Board = Board Turn Cells
 
 instance Show Board where
-  show (Board t cells) = (show t) ++ "\n" ++ header ++ "\n" ++ (unlines cellRows)
+  show (Board t cells) = unlines [(show t), header, rowSep, unlines $ map addSep cellRows]
     where header = "  a b c d e f g h"
-          cellRows = map (\(x,y) -> x ++ " " ++ y) $
+          cellRows = map (\(x,y) -> x ++ "|" ++ y ++ "|") $
                        zip (map show [1..8]) $
-                         (map (intercalate " ") $
+                         (map (intercalate "|") $
                            chunksOf 8 $ map show cells)
+          rowSep = ' ' : (take 17 $ merge (repeat '+') (repeat '-'))
+          addSep x = x ++ "\n" ++ rowSep
+
+merge :: [a] -> [a] -> [a]
+merge xs     []     = xs
+merge []     ys     = ys
+merge (x:xs) (y:ys) = x : y : merge xs ys
 
 newBoard :: Board
 newBoard = Board BlackTurn startCells
@@ -68,7 +75,9 @@ startCells = headAndTail ++ [White,Black] ++ (replicate 6 Empty) ++ [Black,White
 type Row = Int
 type Col = Int
 data CellLocation = CellLocation Col Row
-  deriving (Show)
+
+instance Show CellLocation where
+  show (CellLocation col row) = (chr $ col + 96):show row
 
 parseCellLocation :: String -> Maybe CellLocation
 parseCellLocation (x:y:[])
