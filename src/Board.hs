@@ -51,7 +51,7 @@ type Cells = [Cell]
 data Board = Board Turn Cells
 
 instance Show Board where
-  show (Board t cells) = unlines [(show t), header, rowSep, unlines $ map addSep cellRows]
+  show (Board t cells) = unlines [(show t),header,rowSep,unlines $ map addSep cellRows]
     where header = "  a b c d e f g h"
           cellRows = map (\(x,y) -> x ++ "|" ++ y ++ "|") $
                        zip (map show [1..8]) $
@@ -75,9 +75,28 @@ startCells = headAndTail ++ [White,Black] ++ (replicate 6 Empty) ++ [Black,White
 type Row = Int
 type Col = Int
 data CellLocation = CellLocation Col Row
+  deriving (Eq)
 
 instance Show CellLocation where
   show (CellLocation col row) = (chr $ col + 96):show row
+
+isCorner :: CellLocation -> Bool
+isCorner (CellLocation 1 1) = True
+isCorner (CellLocation 1 8) = True
+isCorner (CellLocation 8 1) = True
+isCorner (CellLocation 8 8) = True
+isCorner _ = False
+
+isEdge :: CellLocation -> Bool
+isEdge (CellLocation col row)
+  | col == 1 || col == 8 = True
+  | row == 1 || row == 8 = True
+  | otherwise = False
+
+isXCell :: CellLocation -> Bool
+isXCell c = c `elem` xCells
+  where xCells = map fromJust $ map parseCellLocation cells
+        cells = ["b1","b2","a2","g1","g2","h2","a7","b7","b8","h7","g7","g8"]
 
 parseCellLocation :: String -> Maybe CellLocation
 parseCellLocation (x:y:[])
@@ -132,8 +151,8 @@ allLinesFromCell cells origin = filter (not . null) $ map tail unwrappedLines
                                     Nothing -> Nothing
                                     (Just c) -> cellNeighbor c d
 
-lineColors :: [[CellLocation]] -> Cells -> [[(CellLocation, Cell)]]
-lineColors lines cells = map (\x -> map (\p -> (p, cellColor p)) x) lines
+lineColors :: [[CellLocation]] -> Cells -> [[(CellLocation,Cell)]]
+lineColors lines cells = map (\x -> map (\p -> (p,cellColor p)) x) lines
   where cellColor c = cells !! ((locationToIndex c) - 1)
 
 -- Don't include the passed in origin in the flip list
@@ -144,7 +163,7 @@ cellsToFlip cells color origin = if (length chain) == 0
   where lineWithColors = lineColors (allLinesFromCell cells origin) cells
         chain = map fromJust $ filter (not . null) $ map (\x -> flipChain x color) lineWithColors
 
-flipChain :: [(CellLocation, Cell)] -> Cell -> Maybe [(CellLocation, Cell)]
+flipChain :: [(CellLocation,Cell)] -> Cell -> Maybe [(CellLocation,Cell)]
 flipChain lineCells color = if (length enemies) < 1
                                then Nothing
                                else if (length friendStart) == 0 || (snd $ head friendStart) /= color
@@ -157,32 +176,38 @@ flipChain lineCells color = if (length enemies) < 1
 emptyCells :: Cells -> [CellLocation]
 emptyCells cells = map indexToLocation $ map snd $ filter (\x -> isEmpty (fst x)) $ zip cells [0..]
 
-hasMove :: Turn -> Cells -> Bool
-hasMove t cells = or $ map (\x -> length (cellsToFlip cells color x) > 0) empties
+hasMove :: Board -> Bool
+hasMove (Board t cells) = or $ map (\x -> length (cellsToFlip cells color x) > 0) empties
   where empties = emptyCells cells
         color = turnToCell t
 
-availableMoves :: Turn -> Cells -> [([CellLocation],CellLocation)]
-availableMoves t cells = filter (\x -> (length $ fst x) > 0) $ map (\x -> ((cellsToFlip cells color x), x)) empties
+availableMoves :: Board -> [([CellLocation],CellLocation)]
+availableMoves (Board t cells) = filter (\x -> (length $ fst x) > 0) $ map (\x -> ((cellsToFlip cells color x), x)) empties
   where empties = emptyCells cells
         color = turnToCell t
 
-sortPossible :: ([CellLocation], CellLocation) -> ([CellLocation], CellLocation) -> Ordering
-sortPossible (x, _) (y, _)
+sortPossible :: ([CellLocation],CellLocation) -> ([CellLocation],CellLocation) -> Ordering
+sortPossible (x,_) (y,_)
   | xLen > yLen = GT
   | xLen < yLen = LT
   | otherwise = EQ
     where xLen = length x
           yLen = length y
 
-chooseMove :: Cells -> Turn -> CellLocation
--- For now return the move that would flip the most enemy cells
-chooseMove cells turn = case length sortedMoves of
+chooseMove :: Board -> CellLocation
+-- For now return the move that would flip the *least* enemy cells
+-- Try to move in corners or edges and avoid placing disks
+-- directly adjacent to the corners
+chooseMove b@(Board turn cells) = case length sortedMoves of
                           -- This case should never happen
                           0 -> (CellLocation 1 1)
-                          _ -> head $ sortedMoves
-  where moves = availableMoves turn cells
-        sortedMoves = map snd $ sortBy (flip sortPossible) moves
+                          _ -> head $ head priority
+  where moves = availableMoves b
+        sortedMoves = map snd $ sortBy sortPossible moves
+        corners = filter isCorner sortedMoves
+        edges = filter (not.isXCell) $ filter isEdge sortedMoves
+        movesWithoutX = filter (not.isXCell) sortedMoves
+        priority = filter (not.null) [corners,edges,movesWithoutX,sortedMoves]
 
 setCells :: Cells -> Cell -> [CellLocation] -> Cells
 setCells cells _ [] = cells

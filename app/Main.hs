@@ -12,14 +12,14 @@ playGame board@(Board turn cells) = do
       0 -> do
         return board
       _ -> do
-        if not $ hasMove turn cells
+        if not $ hasMove board
            then do
              putStrLn $ "== Player has no moves! =="
              playGame (Board (invertTurn turn) cells)
            else do
              moveLocation <- if turn == WhiteTurn
                                then do
-                                 let computerMove = chooseMove cells turn
+                                 let computerMove = chooseMove board
                                  putStrLn $ "Computer plays: [" ++ show computerMove ++ "]"
                                  return $ Just computerMove
                                else do
